@@ -1,0 +1,12 @@
+{
+  "name": "chat-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "ws": "^8.16.0"
+  }
+}

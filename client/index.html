@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Auth Overlay -->
+    <div id="auth-overlay">
+      <div id="auth-card">
+        <h1>Chat</h1>
+        <div id="auth-form">
+          <input type="text" id="auth-username" placeholder="用户名" maxlength="20" autofocus />
+          <input type="password" id="auth-password" placeholder="密码" maxlength="50" />
+          <button id="auth-login-btn">登录</button>
+          <button id="auth-register-btn" class="secondary">注册新账号</button>
+          <div id="auth-error"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Chat Layout -->
+    <div id="main-layout" style="display:none">
+      <!-- Sidebar -->
+      <div id="sidebar">
+        <div id="sidebar-header">
+          <span id="current-user-name"></span>
+          <button id="logout-btn" title="退出登录">退出</button>
+        </div>
+
+        <!-- Search -->
+        <div id="search-area">
+          <input type="text" id="search-input" placeholder="搜索用户添加好友..." maxlength="20" />
+          <div id="search-results"></div>
+        </div>
+
+        <!-- Friend Requests -->
+        <div id="requests-area" style="display:none">
+          <div class="section-title">好友请求</div>
+          <div id="requests-list"></div>
+        </div>
+
+        <!-- Friends List -->
+        <div id="friends-area">
+          <div class="section-title">好友</div>
+          <div id="friends-list"></div>
+        </div>
+      </div>
+
+      <!-- Chat Window -->
+      <div id="chat-window">
+        <div id="chat-placeholder">选择一个好友开始聊天</div>
+        <div id="chat-content" style="display:none">
+          <div id="chat-header-bar">
+            <span id="chat-friend-name"></span>
+            <span id="chat-friend-status"></span>
+          </div>
+          <div id="chat-messages"></div>
+          <div id="chat-input-area">
+            <button id="chat-img-btn" title="发送图片">图片</button>
+            <input type="file" id="chat-img-input" accept="image/*" style="display:none" />
+            <input type="text" id="chat-msg-input" placeholder="输入消息..." maxlength="500" />
+            <button id="chat-send-btn">发送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

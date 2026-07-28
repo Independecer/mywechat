@@ -121,6 +121,10 @@
 **/tmp/
 **/temp/
 
+# Chat app data
+server/data/
+server/uploads/
+
 # Dart
 **/.dart_tool/
 **/*.dart_tool
