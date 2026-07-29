@@ -37,6 +37,8 @@ const chatMsgInput = $('chat-msg-input');
 const chatSendBtn = $('chat-send-btn');
 const chatImgBtn = $('chat-img-btn');
 const chatImgInput = $('chat-img-input');
+const chatFileBtn = $('chat-file-btn');
+const chatFileInput = $('chat-file-input');
 
 // ===== WebSocket =====
 function connectWS() {
@@ -141,16 +143,31 @@ function handleWS(data) {
       break;
     }
 
+    case 'private_file': {
+      const friendId = data.echo ? data.receiverId : data.senderId;
+      cacheMessage(friendId, { type: 'file', mine: data.echo || false, url: data.url, name: data.name, size: data.size, time: data.time });
+      if (activeChat === friendId) renderActiveChat();
+      updateFriendLastMsg(friendId, '[文件] ' + data.name);
+      break;
+    }
+
     case 'history_messages': {
       for (const m of data.messages) {
         const isMine = m.senderId === currentUser.id;
         const friendId = isMine ? m.receiverId : m.senderId;
-        const msg = m.type === 'private_message'
-          ? { type: 'text', mine: isMine, text: m.text, time: m.time }
-          : { type: 'image', mine: isMine, url: m.url, name: m.name, time: m.time };
+        let msg;
+        if (m.type === 'private_message') {
+          msg = { type: 'text', mine: isMine, text: m.text, time: m.time };
+        } else if (m.type === 'private_file') {
+          msg = { type: 'file', mine: isMine, url: m.url, name: m.name, size: m.size, time: m.time };
+        } else {
+          msg = { type: 'image', mine: isMine, url: m.url, name: m.name, time: m.time };
+        }
         cacheMessage(friendId, msg);
         if (msg.type === 'text') {
           updateFriendLastMsg(friendId, m.text);
+        } else if (msg.type === 'file') {
+          updateFriendLastMsg(friendId, '[文件] ' + (m.name || ''));
         } else {
           updateFriendLastMsg(friendId, '[图片]');
         }
@@ -393,6 +410,22 @@ function renderActiveChat() {
         </div>
       `;
     }
+    if (m.type === 'file') {
+      const fileSize = formatFileSize(m.size || 0);
+      return `
+        <div class="msg-bubble ${cls} msg-file">
+          <div class="file-card">
+            <div class="file-icon">&#128196;</div>
+            <div class="file-detail">
+              <div class="file-name">${escapeHtml(m.name)}</div>
+              <div class="file-size">${fileSize}</div>
+              <a class="file-download" href="${escapeHtml(m.url)}" download="${escapeHtml(m.name)}">下载</a>
+            </div>
+          </div>
+          <div class="time">${time}</div>
+        </div>
+      `;
+    }
     return `
       <div class="msg-bubble ${cls}">
         <div class="text">${escapeHtml(m.text)}</div>
@@ -475,11 +508,60 @@ chatImgInput.addEventListener('change', async () => {
   }
 });
 
+// File upload
+chatFileBtn.addEventListener('click', () => chatFileInput.click());
+
+chatFileInput.addEventListener('change', async () => {
+  const file = chatFileInput.files[0];
+  if (!file || !activeChat) return;
+
+  if (file.size > 50 * 1024 * 1024) {
+    addSystemMsgToActive('文件不能超过 50MB');
+    chatFileInput.value = '';
+    return;
+  }
+
+  chatFileBtn.disabled = true;
+  chatFileBtn.textContent = '...';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`/upload-file?token=${token}`, { method: 'POST', body: formData });
+    const result = await res.json();
+
+    if (res.ok) {
+      ws.send(JSON.stringify({
+        type: 'private_file',
+        receiverId: activeChat,
+        url: result.url,
+        name: result.name,
+        size: result.size
+      }));
+    } else {
+      addSystemMsgToActive(result.error || '上传失败');
+    }
+  } catch {
+    addSystemMsgToActive('文件上传失败');
+  } finally {
+    chatFileBtn.disabled = false;
+    chatFileBtn.textContent = '文件';
+    chatFileInput.value = '';
+  }
+});
+
 // ===== Helpers =====
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 // ===== Init =====

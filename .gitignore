@@ -124,6 +124,7 @@
 # Chat app data
 server/data/
 server/uploads/
+server/files/
 
 # Dart
 **/.dart_tool/

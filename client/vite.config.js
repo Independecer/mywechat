@@ -10,7 +10,15 @@ export default defineConfig({
         target: 'ws://localhost:3001',
         ws: true
       },
+      '/upload-file': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      },
       '/upload': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      },
+      '/files': {
         target: 'http://localhost:3001',
         changeOrigin: true
       },

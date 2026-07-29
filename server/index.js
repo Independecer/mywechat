@@ -9,11 +9,14 @@ import Busboy from 'busboy';
 // ----- Config -----
 const PORT = 3001;
 const UPLOAD_DIR = join(process.cwd(), 'uploads');
+const FILES_DIR = join(process.cwd(), 'files');
 const DATA_DIR = join(process.cwd(), 'data');
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_UPLOAD_FILE_SIZE = 50 * 1024 * 1024;
 const TOKEN_BYTES = 32;
 
 if (!existsSync(UPLOAD_DIR)) mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!existsSync(FILES_DIR)) mkdirSync(FILES_DIR, { recursive: true });
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
 // ----- Data Store (JSON file based) -----
@@ -147,6 +150,51 @@ const server = createServer((req, res) => {
     return;
   }
 
+  // Upload file (requires ?token=xxx)  -- must come before /upload to avoid prefix match
+  if (req.method === 'POST' && req.url.startsWith('/upload-file')) {
+    const urlParams = new URL(req.url, `http://localhost:${PORT}`).searchParams;
+    const token = urlParams.get('token');
+
+    if (!token || !tokens.has(token)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: '请先登录' }));
+      return;
+    }
+
+    const busboy = Busboy({ headers: req.headers, limits: { fileSize: MAX_UPLOAD_FILE_SIZE, files: 1 } });
+
+    busboy.on('file', async (fieldname, file, info) => {
+      const { filename: originalName } = info;
+
+      // Sanitize filename
+      const safeName = originalName.replace(/[^a-zA-Z0-9._\-\u4e00-\u9fff]/g, '_');
+      const savedName = genId() + '_' + safeName;
+      const filePath = join(FILES_DIR, savedName);
+      const chunks = [];
+
+      file.on('data', (chunk) => chunks.push(chunk));
+      file.on('end', async () => {
+        const buffer = Buffer.concat(chunks);
+        await writeFile(filePath, buffer);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          url: `/files/${savedName}`,
+          name: originalName,
+          size: buffer.length
+        }));
+      });
+    });
+
+    busboy.on('error', () => {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: '上传失败' }));
+    });
+
+    req.pipe(busboy);
+    return;
+  }
+
   // Upload image (requires ?token=xxx)
   if (req.method === 'POST' && req.url.startsWith('/upload')) {
     const urlParams = new URL(req.url, `http://localhost:${PORT}`).searchParams;
@@ -191,6 +239,24 @@ const server = createServer((req, res) => {
     });
 
     req.pipe(busboy);
+    return;
+  }
+
+  // Serve uploaded files
+  if (req.method === 'GET' && req.url.startsWith('/files/')) {
+    const filename = req.url.slice(7).split('?')[0];
+    const filePath = join(FILES_DIR, filename);
+
+    if (!existsSync(filePath)) {
+      res.writeHead(404);
+      res.end('Not found');
+      return;
+    }
+
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    createReadStream(filePath).pipe(res);
     return;
   }
 
@@ -474,6 +540,37 @@ wss.on('connection', (ws) => {
           nickname: auth.nickname,
           url: data.url,
           name: data.name || '',
+          time: Date.now()
+        };
+
+        // Persist
+        messages.push({ ...msg });
+        persistMessages();
+
+        sendToUser(receiverId, msg);
+        ws.send(JSON.stringify({ ...msg, echo: true }));
+        break;
+      }
+
+      case 'private_file': {
+        if (!userId) return;
+        const receiverId = data.receiverId;
+        if (!receiverId || !data.url) return;
+
+        if (!areFriends(userId, receiverId)) {
+          ws.send(JSON.stringify({ type: 'error', text: '还不是好友，无法发送消息' }));
+          return;
+        }
+
+        const auth = wsAuth.get(ws);
+        const msg = {
+          type: 'private_file',
+          senderId: userId,
+          receiverId,
+          nickname: auth.nickname,
+          url: data.url,
+          name: data.name || '',
+          size: data.size || 0,
           time: Date.now()
         };
 
