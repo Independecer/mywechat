@@ -7,6 +7,7 @@ let requests = [];
 let friendStatuses = {};
 let activeChat = null;
 let chatCache = new Map(); // friendId -> messages[]
+const API_HOST = window.API_HOST || '';
 
 // ===== DOM refs =====
 const $ = (id) => document.getElementById(id);
@@ -39,11 +40,19 @@ const chatImgBtn = $('chat-img-btn');
 const chatImgInput = $('chat-img-input');
 const chatFileBtn = $('chat-file-btn');
 const chatFileInput = $('chat-file-input');
+const chatBackBtn = $('chat-back-btn');
 
 // ===== WebSocket =====
 function connectWS() {
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  ws = new WebSocket(`${protocol}//${location.host}/ws`);
+  let wsUrl;
+  if (API_HOST) {
+    const wsProtocol = API_HOST.startsWith('https') ? 'wss:' : 'ws:';
+    wsUrl = `${wsProtocol}//${API_HOST.replace(/^https?:\/\//, '')}/ws`;
+  } else {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsUrl = `${protocol}//${location.host}/ws`;
+  }
+  ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
     // Auto-login with stored token
@@ -373,6 +382,8 @@ function renderSearchResults(users) {
 }
 
 // ===== Chat =====
+const isMobile = () => window.innerWidth <= 768;
+
 function openChat(friendId) {
   activeChat = friendId;
   chatPlaceholder.style.display = 'none';
@@ -388,7 +399,25 @@ function openChat(friendId) {
   renderActiveChat();
   renderFriendsList();
   chatMsgInput.focus();
+
+  // Mobile: show chat view
+  if (isMobile()) {
+    mainLayout.classList.add('show-chat');
+    chatBackBtn.style.display = 'inline-block';
+  }
 }
+
+function closeChatMobile() {
+  activeChat = null;
+  chatContent.style.display = 'none';
+  chatPlaceholder.style.display = 'flex';
+  if (isMobile()) {
+    mainLayout.classList.remove('show-chat');
+    chatBackBtn.style.display = 'none';
+  }
+}
+
+chatBackBtn.addEventListener('click', () => closeChatMobile());
 
 function cacheMessage(friendId, msg) {
   if (!chatCache.has(friendId)) chatCache.set(friendId, []);
@@ -491,7 +520,7 @@ chatImgInput.addEventListener('change', async () => {
     const formData = new FormData();
     formData.append('image', file);
 
-    const res = await fetch(`/upload?token=${token}`, { method: 'POST', body: formData });
+    const res = await fetch(`${API_HOST}/upload?token=${token}`, { method: 'POST', body: formData });
     const result = await res.json();
 
     if (res.ok) {
@@ -528,7 +557,7 @@ chatFileInput.addEventListener('change', async () => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const res = await fetch(`/upload-file?token=${token}`, { method: 'POST', body: formData });
+    const res = await fetch(`${API_HOST}/upload-file?token=${token}`, { method: 'POST', body: formData });
     const result = await res.json();
 
     if (res.ok) {

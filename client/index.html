@@ -2,8 +2,18 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#e94560" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>MyChat</title>
+  <script>
+    // Set this to your backend server URL for APK builds
+    // Example: window.API_HOST = 'https://your-server.com';
+    window.API_HOST = '';
+  </script>
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -55,6 +65,7 @@
         <div id="chat-placeholder">选择一个好友开始聊天</div>
         <div id="chat-content" style="display:none">
           <div id="chat-header-bar">
+            <button id="chat-back-btn" class="back-btn" style="display:none">&larr;</button>
             <span id="chat-friend-name"></span>
             <span id="chat-friend-status"></span>
           </div>

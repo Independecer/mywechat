@@ -178,4 +178,5 @@ server/files/
 *.Z
 *.lz
 *.lzma
-*.iso
+*.apk
+*.aab

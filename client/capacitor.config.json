@@ -1,0 +1,12 @@
+{
+  "appId": "com.mychat.app",
+  "appName": "MyChat",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
