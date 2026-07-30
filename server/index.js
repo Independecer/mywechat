@@ -409,14 +409,6 @@ wss.on('connection', (ws) => {
             persistFriends();
             sendFriendsList(ws, userId);
             sendFriendsList(clientMap.get(friendId), friendId);
-            sendToUser(friendId, {
-              type: 'friend_accepted',
-              friend: { id: findUserById(userId).id, username: findUserById(userId).username, nickname: findUserById(userId).nickname }
-            });
-            ws.send(JSON.stringify({
-              type: 'friend_accepted',
-              friend: { id: targetUser.id, username: targetUser.username, nickname: targetUser.nickname }
-            }));
           }
           return;
         }
@@ -457,18 +449,6 @@ wss.on('connection', (ws) => {
 
         sendFriendsList(ws, userId);
         sendFriendsList(clientMap.get(rel.userId), rel.userId);
-
-        const acceptor = findUserById(userId);
-        const requester = findUserById(rel.userId);
-
-        ws.send(JSON.stringify({
-          type: 'friend_accepted',
-          friend: { id: requester.id, username: requester.username, nickname: requester.nickname }
-        }));
-        sendToUser(rel.userId, {
-          type: 'friend_accepted',
-          friend: { id: acceptor.id, username: acceptor.username, nickname: acceptor.nickname }
-        });
         break;
       }
 
